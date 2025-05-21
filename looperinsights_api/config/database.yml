@@ -25,6 +25,8 @@ default: &default
 development:
   <<: *default
   database: looperinsights_assignment_development
+  username: user
+  password: password
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
