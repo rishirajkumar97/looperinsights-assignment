@@ -18,6 +18,8 @@ default: &default
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: localhost
+  port: 5432
 
 
 development:
@@ -83,3 +85,4 @@ production:
   database: looperinsights_assignment_production
   username: looperinsights_assignment
   password: <%= ENV["LOOPERINSIGHTS_ASSIGNMENT_DATABASE_PASSWORD"] %>
+  host: <%= ENV['PG_HOST'] || 'localhost' %>
