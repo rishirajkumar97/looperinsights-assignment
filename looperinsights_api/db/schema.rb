@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_21_181803) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_21_184126) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -51,6 +51,12 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_21_181803) do
     t.string "dvdcountry"
     t.string "webchannel"
     t.index ["name"], name: "index_networks_on_name"
+  end
+
+  create_table "raw_tvdata", force: :cascade do |t|
+    t.jsonb "raw_data"
+    t.integer "status", default: 0
+    t.integer "retry_count", default: 0
   end
 
   create_table "shows", force: :cascade do |t|
