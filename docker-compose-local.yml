@@ -11,6 +11,25 @@ services:
       POSTGRES_DB: looperinsights_assignment_development
     volumes:
       - pgdata:/var/lib/postgresql/data
+  
+  api:
+    build:
+      context: ./looperinsights_api
+      dockerfile: Dockerfile
+    container_name: looperinsights_api
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USERNAME: user
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: looperinsights_assignment_development
+      RAILS_ENV: development
+    volumes:
+      - ./looperinsights_api:/app
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0"
 
 volumes:
   pgdata:
