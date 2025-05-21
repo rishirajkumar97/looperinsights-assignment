@@ -14,10 +14,10 @@ class AddEpisode < ActiveRecord::Migration[7.2]
       t.string :image_original_url
       t.string :image_medium_url
       t.bigint :show_id, null: false
-      
+
       t.timestamps
     end
-    
+
     # Add indexes for common queries
     add_index :episodes, :name
     add_index :episodes, :airdate

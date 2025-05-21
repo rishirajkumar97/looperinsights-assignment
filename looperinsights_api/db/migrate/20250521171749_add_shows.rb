@@ -24,10 +24,10 @@ class AddShows < ActiveRecord::Migration[7.2]
       t.string :image_medium_url
       t.text :genres, array: true, default: []
       t.bigint :network_id, null: false
-      
+
       t.timestamps
     end
-    
+
     # Add indexes for common queries
     add_index :shows, :name
     add_index :shows, :url, unique: true
@@ -36,7 +36,7 @@ class AddShows < ActiveRecord::Migration[7.2]
     add_index :shows, :type
     add_index :shows, :updated
     add_index :shows, :network_id
-    
+
     # Add index for external IDs for quick lookups
     add_index :shows, :imdb_id, unique: true, where: "imdb_id IS NOT NULL"
     add_index :shows, :thetvdb_id, unique: true, where: "thetvdb_id IS NOT NULL"
