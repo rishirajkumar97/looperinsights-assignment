@@ -40,4 +40,13 @@ class Episode < ApplicationRecord
   scope :by_rating, -> { order(avg_rating: :desc) }
   scope :recently_aired, -> { where("airdate <= ?", Date.today).order(airdate: :desc) }
   scope :upcoming, -> { where("airdate > ?", Date.today).order(airdate: :asc) }
+
+  def self.ransackable_attributes(auth_object = nil)
+    column_names - [ "created_at", "updated_at" ]
+  end
+
+  # Optional: if you want to allow sorting/filtering on associations
+  def self.ransackable_associations(auth_object = nil)
+    %w[show network web_channel]
+  end
 end

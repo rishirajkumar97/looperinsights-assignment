@@ -10,6 +10,7 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :episodes, only: [ :index, :show ]
   # Defines the root path route ("/")
   # root "posts#index"
 end
