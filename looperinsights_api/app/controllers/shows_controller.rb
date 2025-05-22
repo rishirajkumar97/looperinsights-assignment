@@ -1,4 +1,7 @@
 class ShowsController < ApplicationController
+  include Renderable
+  rescue_from StandardError, with: :render_internal_error
+  rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
   def index
     shows = Show.includes(network: :country, web_channel: :country)
               .page(pagination_params[:page])
@@ -24,7 +27,6 @@ class ShowsController < ApplicationController
 
   def show
     record = show = Show.includes(network: :country, web_channel: :country).find_by!(id: params[:id])
-    # Will raise ActiveRecordNotFound if not found -> Rescued by Renderable
     render json: {
       data: record.as_json(
         include: {

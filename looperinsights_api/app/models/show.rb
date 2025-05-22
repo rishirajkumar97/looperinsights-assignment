@@ -33,7 +33,7 @@
 class Show < ApplicationRecord
   self.inheritance_column = :_type_disabled
   belongs_to :network
-  belongs_to :web_channel
+  belongs_to :web_channel, foreign_key: :webchannel_id, optional: true
   has_many :episodes, dependent: :destroy
 
   # Self-referential associations for last aired and upcoming episodes
@@ -63,7 +63,7 @@ class Show < ApplicationRecord
 
   # Custom Ransack scope
   scope :genres_array_contains_all, ->(values) {
-    array_values = Array(values).flat_map { |v| v.to_s.split(',') }.map(&:strip)
+    array_values = Array(values).flat_map { |v| v.to_s.split(",") }.map(&:strip)
     where("genres @> ARRAY[?]::text[]", Array(array_values))
   }
 end
