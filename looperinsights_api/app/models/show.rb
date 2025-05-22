@@ -33,7 +33,7 @@
 class Show < ApplicationRecord
   self.inheritance_column = :_type_disabled
   belongs_to :network
-  belongs_to :web_channel
+  belongs_to :web_channel, foreign_key: :webchannel_id, optional: true
   has_many :episodes, dependent: :destroy
 
   # Self-referential associations for last aired and upcoming episodes
@@ -47,4 +47,23 @@ class Show < ApplicationRecord
   validates :url, presence: true, uniqueness: true
   validates :type, presence: true
   validates :language, presence: true
+
+  def self.ransackable_attributes(auth_object = nil)
+    column_names - [ "created_at", "updated_at" ]
+  end
+
+  # Optional: if you want to allow sorting/filtering on associations
+  def self.ransackable_associations(auth_object = nil)
+    %w[network web_channel episode]
+  end
+
+  def self.ransackable_scopes(_auth = nil)
+    %i[genres_array_contains_all]
+  end
+
+  # Custom Ransack scope
+  scope :genres_array_contains_all, ->(values) {
+    array_values = Array(values).flat_map { |v| v.to_s.split(",") }.map(&:strip)
+    where("genres @> ARRAY[?]::text[]", Array(array_values))
+  }
 end

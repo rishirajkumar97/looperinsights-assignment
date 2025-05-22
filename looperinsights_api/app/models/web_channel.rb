@@ -12,4 +12,8 @@ class WebChannel < ApplicationRecord
   has_many :shows, dependent: :destroy
 
   validates :name, presence: true
+
+  def self.ransackable_attributes(auth_object = nil)
+    column_names - [ "created_at", "updated_at" ]
+  end
 end
