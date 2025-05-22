@@ -8,7 +8,7 @@ RSpec.describe "ShowsController", type: :request do
     end
 
     it "returns paginated shows with network and web_channel" do
-      get "/shows", params: { page: 1, per_page: 2 }
+      get "/shows", params: { page: 1, per_page: 2 },  headers: basic_auth_header
 
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
@@ -26,7 +26,7 @@ RSpec.describe "ShowsController", type: :request do
 
 
     it "returns the specific show with nested data" do
-      get "/shows/#{show.id}"
+      get "/shows/#{show.id}",  headers: basic_auth_header
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)
 
@@ -36,7 +36,7 @@ RSpec.describe "ShowsController", type: :request do
     end
 
     it "returns 404 if show is not found" do
-      get "/shows/99999"
+      get "/shows/99999", headers: basic_auth_header
       expect(response).to have_http_status(:not_found)
     end
   end
@@ -46,7 +46,7 @@ RSpec.describe "ShowsController", type: :request do
     let!(:non_matching_show) { create(:show, name: "Random Show") }
 
     it "returns filtered shows based on query" do
-      get "/shows/query", params: { q: { name_cont: "Great" } }
+      get "/shows/query", params: { q: { name_cont: "Great" } },  headers: basic_auth_header
 
       expect(response).to have_http_status(:ok)
       json = JSON.parse(response.body)

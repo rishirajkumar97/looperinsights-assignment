@@ -1,3 +1,5 @@
+require 'rails_helper'
+
 RSpec.describe "EpisodesController", type: :request do
   describe "GET /episodes" do
     let!(:country) { create(:country) }
@@ -22,7 +24,7 @@ RSpec.describe "EpisodesController", type: :request do
           },
           page: 1,
           per_page: 10
-        }
+        }, headers: basic_auth_header
 
         expect(response).to have_http_status(:ok)
         body = JSON.parse(response.body)
@@ -40,7 +42,7 @@ RSpec.describe "EpisodesController", type: :request do
           },
           page: 1,
           per_page: 10
-        }
+        }, headers: basic_auth_header
 
         expect(response).to have_http_status(:ok)
         body = JSON.parse(response.body)
@@ -61,7 +63,7 @@ RSpec.describe "EpisodesController", type: :request do
           },
           page: 2,
           per_page: 10
-        }
+        }, headers: basic_auth_header
 
         expect(response).to have_http_status(:ok)
         body = JSON.parse(response.body)
@@ -74,7 +76,7 @@ RSpec.describe "EpisodesController", type: :request do
     let(:episode) { create(:episode) }
 
     it "returns the episode with its associated show data" do
-      get "/episodes/#{episode.id}"
+      get "/episodes/#{episode.id}", headers: basic_auth_header
 
       expect(response).to have_http_status(:ok)
       body = JSON.parse(response.body)
@@ -83,7 +85,7 @@ RSpec.describe "EpisodesController", type: :request do
     end
 
     it "returns 404 for non-existing episode" do
-      get "/episodes/999999"
+      get "/episodes/999999", headers: basic_auth_header
 
       expect(response).to have_http_status(:not_found)
     end
