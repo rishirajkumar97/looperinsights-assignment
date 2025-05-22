@@ -56,4 +56,14 @@ class Show < ApplicationRecord
   def self.ransackable_associations(auth_object = nil)
     %w[network web_channel episode]
   end
+
+  def self.ransackable_scopes(_auth = nil)
+    %i[genres_array_contains_all]
+  end
+
+  # Custom Ransack scope
+  scope :genres_array_contains_all, ->(values) {
+    array_values = Array(values).flat_map { |v| v.to_s.split(',') }.map(&:strip)
+    where("genres @> ARRAY[?]::text[]", Array(array_values))
+  }
 end
