@@ -9,9 +9,9 @@ class SyncTvMazeDataJob < ApplicationJob
 
     dates = if initial_run
               (Date.today..(Date.today + 5)).to_a
-            else
-              [(Date.today + 90)]
-            end
+    else
+              [ (Date.today + 90) ]
+    end
 
     all_records = []
 
@@ -33,7 +33,7 @@ class SyncTvMazeDataJob < ApplicationJob
     inserted_ids = all_records.map { |r| r[:id] }
     TransformDataJob.perform_later(ids: inserted_ids) if inserted_ids.present?
 
-    return true
+    true
   end
 
   private

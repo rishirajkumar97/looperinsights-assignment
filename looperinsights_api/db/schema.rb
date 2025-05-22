@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_21_234007) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_22_022057) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -69,7 +69,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_21_234007) do
     t.date "ended"
     t.string "official_site"
     t.float "avg_rating"
-    t.json "schedule"
+    t.jsonb "schedule"
     t.string "imdb_id"
     t.integer "thetvdb_id"
     t.integer "tvrage_id"
@@ -83,6 +83,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_21_234007) do
     t.bigint "network_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "webchannel_id"
     t.index ["imdb_id"], name: "index_shows_on_imdb_id", unique: true, where: "(imdb_id IS NOT NULL)"
     t.index ["name"], name: "index_shows_on_name"
     t.index ["network_id"], name: "index_shows_on_network_id"
