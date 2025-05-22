@@ -8,7 +8,7 @@
 #  official_site :string
 #
 class WebChannel < ApplicationRecord
-  belongs_to :country
+  belongs_to :country, optional: true
   has_many :shows, dependent: :destroy
 
   validates :name, presence: true

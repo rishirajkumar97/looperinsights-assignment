@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_22_022057) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_22_035417) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,7 +24,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_22_022057) do
   create_table "episodes", force: :cascade do |t|
     t.string "name", null: false
     t.integer "season", null: false
-    t.integer "number", null: false
+    t.integer "number"
     t.string "type", null: false
     t.integer "runtime"
     t.date "airdate", null: false
@@ -61,7 +61,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_22_022057) do
     t.string "name", null: false
     t.string "url", null: false
     t.string "type", null: false
-    t.string "language", null: false
+    t.string "language"
     t.string "status"
     t.integer "runtime"
     t.integer "avg_runtime"
@@ -80,7 +80,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_22_022057) do
     t.string "image_original_url"
     t.string "image_medium_url"
     t.text "genres", default: [], array: true
-    t.bigint "network_id", null: false
+    t.bigint "network_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "webchannel_id"
@@ -98,7 +98,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_22_022057) do
 
   create_table "web_channels", force: :cascade do |t|
     t.string "name", null: false
-    t.integer "country_id", null: false
+    t.bigint "country_id"
     t.string "official_site"
     t.index ["name"], name: "index_web_channels_on_name"
   end

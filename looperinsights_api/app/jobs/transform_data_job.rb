@@ -8,7 +8,7 @@ class TransformDataJob < ApplicationJob
       # Utilize Bulk Inserts to Insert countries first, then the networks, then the shows and last the episodes.
       # Use a fall back exponential fall back mechanism to ensure that we have fault tolerance and a last effort to insert each record one by one.
       # Transform them into the Show, Episode, Country and Network data and update if necessary or the updated has changed.
-      raw_data_records = RawTvdata.where(id: ids).where.not(status: 1)
+      raw_data_records = RawTvdata.where(id: ids)# .where.not(status: 1)
       accumulator = {
         countries: [],
         networks: [],
@@ -74,7 +74,8 @@ class TransformDataJob < ApplicationJob
       episode_ids = upsert_episodes(episodes_to_upsert)
       raw_data_records.update_all(status: 1)
       true
-    rescue StandardError
+    rescue StandardError => e
+      Rails.logger.error("Error occured - #{e}")
       init_exponential_fall_back(ids, retry_count) # initiates exponential backoff
     end
   end
@@ -100,7 +101,6 @@ class TransformDataJob < ApplicationJob
   def extract_distribution(data, type, reverse_lookup_country)
     c = data.dig("show", type)
     return nil unless c
-
     country_data = data.dig("show", type, "country")
     country_id = if country_data.nil?
       nil
@@ -250,7 +250,6 @@ class TransformDataJob < ApplicationJob
     end
 
     result = Show.upsert_all(filtered_data) if filtered_data.any? # only insert if the incoming data has updated or new shows
-    raise StandardError, "Error while upserting episodes" if filtered_data.any? && (result == false || result.nil?)
     all_ids = result.result.rows.flatten if result&.result&.rows&.any?
 
     all_ids
@@ -274,7 +273,6 @@ class TransformDataJob < ApplicationJob
 
     result = Episode.upsert_all(filtered_data) if filtered_data.any? # only insert if the incoming data has updated or new shows
 
-    raise StandardError, "Error while upserting episodes" if filtered_data.any? && (result == false || result.nil?)
     all_ids = result.result.rows.flatten if result&.result&.rows&.any?
 
     all_ids

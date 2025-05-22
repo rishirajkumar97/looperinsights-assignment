@@ -1,3 +1,4 @@
+require "sidekiq-scheduler"
 class SyncTvMazeDataJob < ApplicationJob
   queue_as :default
 
@@ -8,9 +9,9 @@ class SyncTvMazeDataJob < ApplicationJob
     initial_run = RawTvdata.count.zero?
 
     dates = if initial_run
-              (Date.today..(Date.today + 5)).to_a
+              (Date.today..(Date.today + 90)).to_a # Initial Feed from today to plus 90 days in future
     else
-              [ (Date.today + 90) ]
+              [ (Date.today + 91) ] # Subsequent Runs just run for the 91st day from today
     end
 
     all_records = []
@@ -31,7 +32,7 @@ class SyncTvMazeDataJob < ApplicationJob
     end
 
     inserted_ids = all_records.map { |r| r[:id] }
-    TransformDataJob.perform_later(ids: inserted_ids) if inserted_ids.present?
+    TransformDataJob.perform_later(ids: inserted_ids, retry_count: 0) if inserted_ids.present?
 
     true
   end

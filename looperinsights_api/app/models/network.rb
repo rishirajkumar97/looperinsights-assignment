@@ -8,7 +8,7 @@
 #  official_site :string
 #
 class Network < ApplicationRecord
-  belongs_to :country
+  belongs_to :country, optional: true
   has_many :shows, dependent: :destroy
 
   validates :name, presence: true
