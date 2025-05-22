@@ -27,9 +27,36 @@ services:
       DATABASE_PASSWORD: password
       DATABASE_NAME: looperinsights_assignment_development
       RAILS_ENV: development
+      REDIS_URL: redis://redis:6379/0          # Add Redis URL for Sidekiq
     volumes:
       - ./looperinsights_api:/app
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0"
+
+  sidekiq:
+    build:
+      context: ./looperinsights_api
+      dockerfile: Dockerfile
+    container_name: looperinsights_sidekiq
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USERNAME: user
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: looperinsights_assignment_development
+      RAILS_ENV: development
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./looperinsights_api:/app
+    command: bundle exec sidekiq
+
+  redis:
+    image: redis:7
+    container_name: local_redis
+    restart: always
+    ports:
+      - "6379:6379"
 
 volumes:
   pgdata:
