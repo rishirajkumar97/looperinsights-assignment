@@ -47,4 +47,13 @@ class Show < ApplicationRecord
   validates :url, presence: true, uniqueness: true
   validates :type, presence: true
   validates :language, presence: true
+
+  def self.ransackable_attributes(auth_object = nil)
+    column_names - [ "created_at", "updated_at" ]
+  end
+
+  # Optional: if you want to allow sorting/filtering on associations
+  def self.ransackable_associations(auth_object = nil)
+    %w[network web_channel episode]
+  end
 end
