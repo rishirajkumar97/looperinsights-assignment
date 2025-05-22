@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_21_184126) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_21_234007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -48,8 +48,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_21_184126) do
     t.string "name", null: false
     t.integer "country_id", null: false
     t.string "official_site"
-    t.string "dvdcountry"
-    t.string "webchannel"
     t.index ["name"], name: "index_networks_on_name"
   end
 
@@ -95,5 +93,12 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_21_184126) do
     t.index ["type"], name: "index_shows_on_type"
     t.index ["updated"], name: "index_shows_on_updated"
     t.index ["url"], name: "index_shows_on_url", unique: true
+  end
+
+  create_table "web_channels", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "country_id", null: false
+    t.string "official_site"
+    t.index ["name"], name: "index_web_channels_on_name"
   end
 end

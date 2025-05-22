@@ -1,5 +1,6 @@
 class Show < ApplicationRecord
   belongs_to :network
+  belongs_to :web_channel
   has_many :episodes, dependent: :destroy
 
   # Self-referential associations for last aired and upcoming episodes
