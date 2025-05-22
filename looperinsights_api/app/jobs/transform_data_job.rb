@@ -1,8 +1,8 @@
 class TransformDataJob < ApplicationJob
   queue_as :high
 
-  begin
-    def perform(ids: [])
+  def perform(ids: [], retry_count: 0)
+    begin
       # With the incoming ids check if they are processed or not to perform consistency and prevent further processing
       # Remove the already processed ids.
       # Utilize Bulk Inserts to Insert countries first, then the networks, then the shows and last the episodes.
@@ -12,8 +12,6 @@ class TransformDataJob < ApplicationJob
       accumulator = {
         countries: [],
         networks: [],
-        shows: [],
-        episodes: [],
         webchannels: []
       }
 
@@ -65,13 +63,21 @@ class TransformDataJob < ApplicationJob
 
       shows_to_upsert = extract_show_data(latest_shows_by_id)
       show_ids = upsert_shows(shows_to_upsert)
-      # Process Episodes - Last Effort
+
+      show_records = Show.where(id: ids)
+
+      episodes_to_upsert = extract_episode_data(
+        raw_data_records.pluck(
+            :raw_data
+          ).as_json
+        )
+      episode_ids = upsert_episodes(episodes_to_upsert)
+      raw_data_records.update_all(status: 1)
       true
+    rescue StandardError
+      init_exponential_fall_back(ids, retry_count) # initiates exponential backoff
     end
-  rescue
   end
-
-
 
   private
 
@@ -87,6 +93,10 @@ class TransformDataJob < ApplicationJob
     }
   end
 
+  # Extract Distributiond ata based on the type
+  # data to be ingested
+  # type - Network / WEbchannel distribution type
+  # reverselookup - hash with country,code,timezone as key and the value as country id for O(1) lookup
   def extract_distribution(data, type, reverse_lookup_country)
     c = data.dig("show", type)
     return nil unless c
@@ -106,6 +116,7 @@ class TransformDataJob < ApplicationJob
     }
   end
 
+  # Extract Show Data
   def extract_show_data(data)
     data.map do |id, show|
       {
@@ -138,6 +149,27 @@ class TransformDataJob < ApplicationJob
     end
   end
 
+  # Extract Episode Data
+  def extract_episode_data(data)
+    data.map do |record|
+      {
+        id: record["id"], # assuming you want to keep the show ID for reference
+        name: record["name"],
+        season: record["season"],
+        number: record["number"],
+        type: record["type"],
+        runtime: record["runtime"],
+        airdate: record["airdate"],
+        airstamp: record["airstamp"],
+        official_site: record["officialSite"],
+        avg_rating: record.dig("rating", "average"),
+        summary: record["summary"],
+        show_id: record.dig("show", "id"),
+        image_original_url: record.dig("image", "original"),
+        image_medium_url: record.dig("image", "medium")
+      }
+    end
+  end
   # countries- list of countries hash to be inserted from the incoming data
   def upsert_countries(countries)
     return if countries.blank?
@@ -201,6 +233,8 @@ class TransformDataJob < ApplicationJob
     all_ids
   end
 
+  # method to upsert shows model / table
+  # data - the hash of the shows with extracted information
   def upsert_shows(data)
     # Extract all incoming IDs
     incoming_ids = data.map { |show| show[:id] }
@@ -212,13 +246,56 @@ class TransformDataJob < ApplicationJob
     # Reject records from new_data if the existing updated_at is newer (i.e., incoming is older)
     filtered_data = data.reject do |show|
       existing_updated_at = existing_records[show[:id]]
-      existing_updated_at && existing_updated_at > show[:updated_at].to_time
+      existing_updated_at && existing_updated_at > show[:updated]&.to_time
     end
 
     result = Show.upsert_all(filtered_data) if filtered_data.any? # only insert if the incoming data has updated or new shows
-
+    raise StandardError, "Error while upserting episodes" if filtered_data.any? && (result == false || result.nil?)
     all_ids = result.result.rows.flatten if result&.result&.rows&.any?
 
     all_ids
+  end
+
+  # method to upsert episode model / table
+  # data - the hash of the episodes with extracted information
+  def upsert_episodes(data)
+    # Extract all incoming IDs
+    incoming_ids = data.map { |show| show[:id] }
+
+    # Fetch existing shows' updated_at from DB for these IDs
+    existing_records = Episode.where(id: incoming_ids).pluck(:id).to_a
+    # This results in a hash like { 1 => Time1, 2 => Time2, ... }
+
+    # Reject records from new_data if the existing data_id is present in older episode pulls
+    filtered_data = data.reject do |episode|
+      episode_id = episode[:id]
+      existing_records.include? episode_id
+    end
+
+    result = Episode.upsert_all(filtered_data) if filtered_data.any? # only insert if the incoming data has updated or new shows
+
+    raise StandardError, "Error while upserting episodes" if filtered_data.any? && (result == false || result.nil?)
+    all_ids = result.result.rows.flatten if result&.result&.rows&.any?
+
+    all_ids
+  end
+
+  # Method for fall back and fault tolerance - with exponential backoff algorithm paragdim.
+  # ids - the ids of the raw data to process
+  # retry_count - the current retry_count
+  def init_exponential_fall_back(ids, retry_count)
+    retry_count += 1
+    if retry_count < 2
+      status = 2 # failed queue but can reprocess automatically
+    else
+      status = 3 # completely errored
+    end
+
+    records = RawTvdata.where(id: ids).update_all(status: status, retry_count: retry_count)
+    if retry_count < 2
+      left, right = ids.each_slice((ids.size/2.0).round).to_a # Split ids to two halves
+      TransformDataJob.perform_later(ids: left, retry_count: retry_count)
+      TransformDataJob.perform_later(ids: right, retry_count: retry_count)
+    end
   end
 end
