@@ -30,6 +30,7 @@ gem "bootsnap", require: false
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
+gem 'ransack', :github => 'activerecord-hackery/ransack', :branch => 'main'
 gem "sidekiq", "~> 8.0"
 
 group :development, :test do
