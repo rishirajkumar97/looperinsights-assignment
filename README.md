@@ -6,17 +6,12 @@ A Ruby Application to scrap upcoming tv shows data for the next 90 days with goo
 ## Design Choices in database and Ingestion Pipeline:
 
 - The database schema is as follows, instead of doing a type on the distributor , we wanted their ids to be very accessible and might overlap as we wouldnt know if TvMaze is storing them in a single table or differnt table. Hence two tables. Though processing uses the type mechanism to parse country and populate network,web channels from the incoming data
+- Optimized performance: **Single-loop O(n) complexity**
+- Minimal database overhead: ***Only 4 database inserts total** (including both read and write operations, one per class/object type, no reads during ingestion ideally as handled via on conflict to get back the id)
+- Robust architecture: **Built-in idempotency and fault tolerance mechanism**
 - The builder pattern is utilized in the ingestion pipelines, starting from the most smallest or independent object the objects are populated. The import order is Country, Network/Webchannel/, Show and then episodes.
 - Active Record Import gem is utilised to optimize the number of database operations overall it has only 4 import operations (one per table).
-- Optimized performance: *Single-loop O(n) complexity*
-- Minimal database overhead: *Only 4 database inserts total* (including both read and write operations, one per class/object type, no reads during ingestion ideally as handled via on conflict to get back the id)
-- Robust architecture: *Built-in idempotency and fault tolerance mechanism*
-
 - The RawTvData Table is utilized to ensure that the original data pulled and stored for later uses for cross verification or for mining or any analysis. Also this table can be archived over time and would be acting as a Cold Storage in most cases.
-
-- For optimal and efficient performance , *upsert_all* is used rather than create , so mimicking bulk create. Also the upsert overrides rails model validations checks and saves us time. Only the database constraints would need to be honoured.
-- The time complexity of ingesting n-records would be O(4n) as we need to build the four entities.
-
 
 # Local Docker Setup / Initialization
 - Ensure docker-compose command is installed and working.
