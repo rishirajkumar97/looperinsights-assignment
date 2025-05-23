@@ -31,7 +31,7 @@ class SyncTvMazeDataJob < ApplicationJob
       )
     end
 
-    inserted_ids = all_records.map { |r| r[:id] }
+    inserted_ids = all_records.map { |r| r[:id] }.uniq
     TransformDataJob.perform_later(ids: inserted_ids, retry_count: 0) if inserted_ids.present?
 
     true
