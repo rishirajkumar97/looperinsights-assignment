@@ -47,4 +47,17 @@ A Ruby Application to scrap upcoming tv shows data for the next 90 days with goo
 
 # Deployment Design
 
-- The application has mainly 4 components with 3 components needing to be scaled up and down as per the 
+- The application has mainly 4 components.
+ECS - To deploy rails docker images behind and ALB for load balancing.
+Sidekiq Containers - Fixed Count as per the business domain knowledge
+RDS - PostgreQL (Read Optimized + 99.9% Availability)
+Redis Server
+[GitHub] --> [CodePipeline + CodeBuild] --> [ECR] --> [ECS]
+                                                    |
+                                                    +---> [ALB] ---> [Rails API Containers]
+                                                    |
+                                                    +---> [Sidekiq Containers]
+                                                    |
+                                                    +---> [RDS (PostgreSQL) + Read Replica]
+                                                    |
+                                                    +---> [ElastiCache (Redis)]

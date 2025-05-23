@@ -32,6 +32,7 @@ gem "bootsnap", require: false
 gem "rack-cors"
 gem "ransack", github: "activerecord-hackery/ransack", branch: "main"
 gem "sidekiq", "~> 8.0"
+gem 'lograge'
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
