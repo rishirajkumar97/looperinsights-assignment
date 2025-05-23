@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_22_035417) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_23_184759) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -18,6 +18,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_22_035417) do
     t.string "name", null: false
     t.string "code", null: false
     t.string "timezone", null: false
+    t.index ["code", "timezone", "name"], name: "index_countries_on_code_and_timezone_and_name", unique: true
     t.index ["name"], name: "index_countries_on_name"
   end
 
@@ -83,7 +84,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_22_035417) do
     t.bigint "network_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "webchannel_id"
+    t.bigint "web_channel_id"
     t.index ["imdb_id"], name: "index_shows_on_imdb_id", unique: true, where: "(imdb_id IS NOT NULL)"
     t.index ["name"], name: "index_shows_on_name"
     t.index ["network_id"], name: "index_shows_on_network_id"

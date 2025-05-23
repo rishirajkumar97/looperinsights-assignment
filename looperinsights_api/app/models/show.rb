@@ -33,7 +33,7 @@
 class Show < ApplicationRecord
   self.inheritance_column = :_type_disabled
   belongs_to :network
-  belongs_to :web_channel, foreign_key: :webchannel_id, optional: true
+  belongs_to :web_channel, foreign_key: :web_channel_id, optional: true
   has_many :episodes, dependent: :destroy
 
   # Self-referential associations for last aired and upcoming episodes
