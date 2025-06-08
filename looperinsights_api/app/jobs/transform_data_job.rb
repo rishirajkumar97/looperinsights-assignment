@@ -73,23 +73,14 @@ class TransformDataJob < ApplicationJob
 
   # Extract countries with deduplication using composite key
   def extract_and_deduplicate_countries(data, countries_map)
-    # Network country
-    if data.dig("show", "network", "country").present?
-      country_data = data.dig("show", "network", "country")
-      country_key = "#{country_data['code']}_#{country_data['name']}_#{country_data['timezone']}"
+    extract_country_helper(data, countries_map, "network")
+    extract_country_helper(data, countries_map, "webChannel")
+  end
 
-      unless countries_map[country_key]
-        countries_map[country_key] = Country.new(
-          name: country_data["name"],
-          timezone: country_data["timezone"],
-          code: country_data["code"]
-        )
-      end
-    end
-
-    # WebChannel country
-    if data.dig("show", "webChannel", "country").present?
-      country_data = data.dig("show", "webChannel", "country")
+  # Extracts country from the incoming distribution type
+  def extract_country_helper(data, countries_map, distribution_type)
+    if data.dig("show", distribution_type, "country").present?
+      country_data = data.dig("show", distribution_type, "country")
       country_key = "#{country_data['code']}_#{country_data['name']}_#{country_data['timezone']}"
 
       unless countries_map[country_key]
