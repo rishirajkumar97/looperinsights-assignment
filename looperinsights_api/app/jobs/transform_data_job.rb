@@ -3,31 +3,33 @@ class TransformDataJob < ApplicationJob
 
   def perform(ids: [], retry_count: 0)
     begin
-      # Single loop to extract all data - O(n) complexity
-      raw_data_records = RawTvdata.where(id: ids, status: 0)
+      ActiveRecord::Base.transaction do
+        # Single loop to extract all data - O(n) complexity
+        raw_data_records = RawTvdata.where(id: ids, status: 0)
 
-      # Global accumulators - will be populated from the extraction maps
-      @countries_data = []
-      @networks_data = []
-      @webchannels_data = []
-      @shows_data = []
-      @episodes_data = []
+        # Global accumulators - will be populated from the extraction maps
+        @countries_data = []
+        @networks_data = []
+        @webchannels_data = []
+        @shows_data = []
+        @episodes_data = []
 
-      # Single pass through all records to extract all required data
-      extract_all_data(raw_data_records)
+        # Single pass through all records to extract all required data
+        extract_all_data(raw_data_records)
 
-      # Build countries first
-      build_countries
+        # Build countries first
+        build_countries
 
-      # Build networks and webchannels - no lookup needed, import handles associations
-      build_networks
-      build_webchannels
+        # Build networks and webchannels - no lookup needed, import handles associations
+        build_networks
+        build_webchannels
 
-      build_shows
-      build_episodes
+        build_shows
+        build_episodes
 
-      # Mark records as processed
-      raw_data_records.update_all(status: 1)
+        # Mark records as processed
+        raw_data_records.update_all(status: 1)
+      end
       true
     rescue StandardError => e
       Rails.logger.error("Error occurred - #{e}")
@@ -229,248 +231,6 @@ class TransformDataJob < ApplicationJob
     )
   end
 
-  # Extract countries from a single record - Build actual Country objects for import gem
-  def extract_countries_from_record(data)
-    # Network country
-    if data.dig("show", "network", "country").present?
-      country_data = data.dig("show", "network", "country")
-      country = Country.new(
-        name: country_data["name"],
-        timezone: country_data["timezone"],
-        code: country_data["code"]
-      )
-      @countries_data << country
-    end
-
-    # WebChannel country
-    if data.dig("show", "webChannel", "country").present?
-      country_data = data.dig("show", "webChannel", "country")
-      country = Country.new(
-        name: country_data["name"],
-        timezone: country_data["timezone"],
-        code: country_data["code"]
-      )
-      @countries_data << country
-    end
-  end
-
-  # Extract network and webchannel distribution data - Build actual objects with Country associations
-  def extract_distributions_from_record(data)
-    # Network data - build actual objects
-    if data.dig("show", "network").present?
-      network = data.dig("show", "network")
-
-      # Find the corresponding country object from @countries_data
-      network_country = nil
-      if network["country"].present?
-        country_data = network["country"]
-        network_country = @countries_data.find do |country|
-          country.name == country_data["name"] &&
-          country.timezone == country_data["timezone"] &&
-          country.code == country_data["code"]
-        end
-      end
-
-      # Build network object with country association
-      network_obj = Network.new(
-        id: network["id"],
-        name: network["name"],
-        official_site: network["officialSite"],
-        country: network_country
-      )
-
-      @networks_data << network_obj
-    end
-
-    # WebChannel data - build actual objects
-    if data.dig("show", "webChannel").present?
-      webchannel = data.dig("show", "webChannel")
-
-      # Find the corresponding country object from @countries_data
-      webchannel_country = nil
-      if webchannel["country"].present?
-        country_data = webchannel["country"]
-        webchannel_country = @countries_data.find do |country|
-          country.name == country_data["name"] &&
-          country.timezone == country_data["timezone"] &&
-          country.code == country_data["code"]
-        end
-      end
-
-      # Build webchannel object with country association
-      webchannel_obj = WebChannel.new(
-        id: webchannel["id"],
-        name: webchannel["name"],
-        official_site: webchannel["officialSite"],
-        country: webchannel_country
-      )
-
-      @webchannels_data << webchannel_obj
-    end
-  end
-
-  # Extract show data (keeping latest by updated timestamp)
-  def extract_show_from_record(data)
-    show = data["show"]
-    return unless show.present?
-
-    show_id = show["id"]
-    updated_time = Time.at(show["updated"].to_i)
-
-    # Only keep the latest version of each show
-    if @shows_data[show_id].nil? || @shows_data[show_id][:updated] < updated_time
-      @shows_data[show_id] = {
-        id: show["id"],
-        name: show["name"],
-        url: show["url"],
-        type: show["type"],
-        language: show["language"],
-        ended: show["ended"],
-        image_original_url: show.dig("image", "original"),
-        image_medium_url: show.dig("image", "medium"),
-        genres: show["genres"] || [],
-        avg_rating: show.dig("rating", "average"),
-        status: show["status"],
-        network_id: show.dig("network", "id"),
-        webchannel_id: show.dig("webChannel", "id"),
-        summary: show["summary"],
-        updated: updated_time,
-        schedule: show["schedule"].to_h.to_json,
-        premiered: show["premiered"] ? Date.parse(show["premiered"]) : nil,
-        official_site: show["officialSite"],
-        avg_runtime: show["averageRuntime"] || show["runtime"],
-        runtime: show["runtime"],
-        tvrage_id: show.dig("externals", "tvrage"),
-        imdb_id: show.dig("externals", "imdb"),
-        thetvdb_id: show.dig("externals", "thetvdb"),
-        lastaired_episode_id: show.dig("_links", "self", "previousepisode")&.[](/\d+$/),
-        upcoming_episode_id: show.dig("_links", "self", "nextepisode")&.[](/\d+$/)
-      }
-    end
-  end
-
-  # Extract episode data - Build complete nested object hierarchy
-  def extract_episode_from_record(data)
-    episode_data = data.except("show") # Episode data is at root level
-    return unless episode_data["id"].present?
-
-    # Build the complete Show object with all its associations
-    show_data = data["show"]
-    show_obj = build_show_object(show_data) if show_data.present?
-
-    # Build Episode object with associated Show
-    episode_obj = Episode.new(
-      id: episode_data["id"],
-      name: episode_data["name"],
-      season: episode_data["season"],
-      number: episode_data["number"],
-      type: episode_data["type"],
-      runtime: episode_data["runtime"],
-      airdate: episode_data["airdate"],
-      airstamp: episode_data["airstamp"],
-      official_site: episode_data["officialSite"],
-      avg_rating: episode_data.dig("rating", "average"),
-      summary: episode_data["summary"],
-      show: show_obj,
-      image_original_url: episode_data.dig("image", "original"),
-      image_medium_url: episode_data.dig("image", "medium")
-    )
-
-    @episodes_data << episode_obj
-  end
-
-  # Helper method to build complete Show object with all nested associations
-  def build_show_object(show_data)
-    # Build Network object if present
-    network_obj = nil
-    if show_data.dig("network").present?
-      network_data = show_data["network"]
-
-      # Build Country for Network
-      network_country = nil
-      if network_data["country"].present?
-        network_country = find_or_build_country(network_data["country"])
-      end
-
-      network_obj = Network.new(
-        id: network_data["id"],
-        name: network_data["name"],
-        official_site: network_data["officialSite"],
-        country: network_country
-      )
-    end
-
-    # Build WebChannel object if present
-    webchannel_obj = nil
-    if show_data.dig("webChannel").present?
-      webchannel_data = show_data["webChannel"]
-
-      # Build Country for WebChannel
-      webchannel_country = nil
-      if webchannel_data["country"].present?
-        webchannel_country = find_or_build_country(webchannel_data["country"])
-      end
-
-      webchannel_obj = WebChannel.new(
-        id: webchannel_data["id"],
-        name: webchannel_data["name"],
-        official_site: webchannel_data["officialSite"],
-        country: webchannel_country
-      )
-    end
-
-    # Build Show object with all associations
-    Show.new(
-      id: show_data["id"],
-      name: show_data["name"],
-      url: show_data["url"],
-      type: show_data["type"],
-      language: show_data["language"],
-      ended: show_data["ended"],
-      image_original_url: show_data.dig("image", "original"),
-      image_medium_url: show_data.dig("image", "medium"),
-      genres: show_data["genres"] || [],
-      avg_rating: show_data.dig("rating", "average"),
-      status: show_data["status"],
-      network: network_obj,
-      webchannel: webchannel_obj,
-      summary: show_data["summary"],
-      updated: Time.at(show_data["updated"].to_i),
-      schedule: show_data["schedule"].to_h.to_json,
-      premiered: show_data["premiered"] ? Date.parse(show_data["premiered"]) : nil,
-      official_site: show_data["officialSite"],
-      avg_runtime: show_data["averageRuntime"] || show_data["runtime"],
-      runtime: show_data["runtime"],
-      tvrage_id: show_data.dig("externals", "tvrage"),
-      imdb_id: show_data.dig("externals", "imdb"),
-      thetvdb_id: show_data.dig("externals", "thetvdb"),
-      lastaired_episode_id: show_data.dig("_links", "self", "previousepisode")&.[](/\d+$/),
-      upcoming_episode_id: show_data.dig("_links", "self", "nextepisode")&.[](/\d+$/)
-    )
-  end
-
-  # Helper to find existing country object or create new one
-  def find_or_build_country(country_data)
-    # First try to find in already extracted countries
-    existing_country = @countries_data.find do |country|
-      country.name == country_data["name"] &&
-      country.timezone == country_data["timezone"] &&
-      country.code == country_data["code"]
-    end
-
-    # If not found, create new one
-    unless existing_country
-      existing_country = Country.new(
-        name: country_data["name"],
-        timezone: country_data["timezone"],
-        code: country_data["code"]
-      )
-      @countries_data << existing_country
-    end
-
-    existing_country
-  end
-
   # Build countries using import gem with correct conflict resolution
   def build_countries
     return [] if @countries_data.empty?
@@ -498,16 +258,6 @@ class TransformDataJob < ApplicationJob
     raise StandardError, "Count Mismatch in importing countries" if returned_ids&.length != countries_array&.length
 
     true
-  end
-
-  # Build reverse lookup hash for countries: {[code, name, timezone] => id} - Optimized DB format
-  def build_country_reverse_lookup(country_ids)
-    # Single database read with optimized pluck format
-    countries_data = Country.where(id: country_ids)
-                           .pluck(Arel.sql("ARRAY[code, name, timezone], id"))
-
-    # Direct hash conversion - no loops needed
-    countries_data.to_h
   end
 
   # Build networks using import gem - objects with associations work perfectly
